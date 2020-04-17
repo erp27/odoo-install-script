@@ -76,7 +76,7 @@ sudo su - postgres -c "createuser -s $ODOO_USER" 2> /dev/null || true
 
 # Install python3 + pip3
 echo_info "\nInstall Python 3 + pip3"
-sudo apt-install install python3 python3-pip -y
+sudo apt-get install python3 python3-pip -y
 
 sudo ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 ssh-keyscan -H github.com >> ~/.ssh/known_hosts
