@@ -122,3 +122,8 @@ echo_info "\nCreate Odoo log directory"
 [ ! -d "/var/log/$ODOO_USER" ] && sudo mkdir /var/log/$ODOO_USER
 sudo chown $ODOO_USER:$ODOO_USER /var/log/$ODOO_USER
 
+echo_info "\nCreate custom addons directory"
+sudo su $ODOO_USER -c "mkdir -p $ODOO_HOME/custom/addons"
+
+echo_info "\nSetting permissions on Odoo home"
+sudo chown -R ${ODOO_USER}: ${ODOO_HOME}/*
