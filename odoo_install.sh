@@ -78,6 +78,8 @@ sudo su - postgres -c "createuser -s $ODOO_USER" 2> /dev/null || true
 echo_info "\nInstall Python 3 + pip3"
 sudo apt-install install python3 python3-pip -y
 
+sudo ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 # clean old files
 rm -f ./requirements.txt
 wget -c https://raw.githubusercontent.com/erp27/odoo/${ODOO_BRANCH}/requirements.txt
@@ -123,7 +125,62 @@ echo_info "\nCreate Odoo log directory"
 sudo chown $ODOO_USER:$ODOO_USER /var/log/$ODOO_USER
 
 echo_info "\nCreate custom addons directory"
-sudo su $ODOO_USER -c "mkdir -p $ODOO_HOME/custom/addons"
+sudo su $ODOO_USER -c "mkdir -p ${ODOO_HOME}/custom/addons"
 
 echo_info "\nSetting permissions on Odoo home"
 sudo chown -R ${ODOO_USER}: ${ODOO_HOME}/*
+
+echo_info "\nCreate server config file"
+sudo touch ${ODOO_CONFIG_FILE}
+sudo su root -c "printf '[options] \n; password that allows database operations:\n' > ${ODOO_CONFIG_FILE}"
+sudo su root -c "printf 'admin_passwd = ${ODOO_SUPERADMIN}\n' >> ${ODOO_CONFIG_FILE}"
+sudo su root -c "printf 'xmlrpc_port = ${ODOO_XMLRPC_PORT}\n' >> ${ODOO_CONFIG_FILE}"
+sudo su root -c "printf 'logfile = /var/log/${ODOO_USER}/${ODOO_CONFIG}.log\n' >> ${ODOO_CONFIG_FILE}"
+sudo su root -c "printf 'log_handler = :INFO\n' >> ${ODOO_CONFIG_FILE}"
+sudo su root -c "printf 'addons_path=${ODOO_HOME_EXT}/addons,${ODOO_HOME}/custom/addons\n' >> ${ODOO_CONFIG_FILE}"
+sudo chown ${ODOO_USER}: ${ODOO_CONFIG_FILE}
+sudo chmod 640 ${ODOO_CONFIG_FILE}
+
+# Adding ODOO as a deamon systemd)
+echo_info "Create systemd service file"
+cat <<EOF > /etc/systemd/system/odoo${ODOO_VERSION}.service
+[Unit]
+Description=Odoo ${ODOO_VERSION} ERP system
+Requires=postgresql.service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+SyslogIdentifier=odoo${ODOO_VERSION}
+PermissionsStartOnly=true
+User=${ODOO_USER}
+Group=${ODOO_USER}
+ExecStart=$ODOO_HOME_EXT/odoo-bin -c ${ODOO_CONFIG_FILE}
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target
+
+# pidfile
+#PIDFILE=/var/run/\${NAME}.pid
+EOF
+
+echo_info "Reload systemd manager configuration"
+sudo systemctl daemon-reload
+echo_info "Start Odoo service"
+sudo systemctl start odoo${ODOO_VERSION}
+sudo systemctl enable odoo${ODOO_VERSION}
+
+#echo -e "* Starting Odoo Service"
+#sudo su root -c "/etc/init.d/$ODOO_CONFIG start"
+echo_warn "-----------------------------------------------------------"
+echo_info "\nDone! The Odoo server is up and running. Specifications:"
+echo "TCP port: $ODOO_XMLRPC_PORT"
+echo "User service: $ODOO_USER"
+echo "User PostgreSQL: $ODOO_USER"
+echo "Source code location: $ODOO_USER"
+echo "Addons dirctory: $ODOO_USER/$ODOO_CONFIG/addons/"
+echo "Start Odoo service: sudo systemctl start odoo${ODOO_VERSION}"
+echo "Stop Odoo service: sudo systemctl stop odoo${ODOO_VERSION}"
+echo "Restart Odoo service: sudo systemctl restart odoo${ODOO_VERSION}"
+echo "Show log: sudo tail -f /var/log/${ODOO_USER}/${ODOO_CONFIG}.log"
