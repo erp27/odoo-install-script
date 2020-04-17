@@ -59,7 +59,7 @@ echo_info "\nUpdate Ubuntu server"
 sudo apt-get update && sudo apt-get upgrade -y
 
 echo_info "\nInstall tool packages"
-sudo apt-get install wget wget curl git bzr ca-certificates -y
+sudo apt-get install wget wget curl git bzr ca-certificates gdebi-core -y
 
 # Install PostgreSQL
 sudo apt-get purge postgresql
@@ -82,3 +82,43 @@ sudo apt-install install python3 python3-pip -y
 rm -f ./requirements.txt
 wget -c https://raw.githubusercontent.com/erp27/odoo/${ODOO_BRANCH}/requirements.txt
 sudo pip3 install -r requirements.txt
+
+# Install Wkhtmltopdf if needed
+if [ $INSTALL_WKHTMLTOPDF = "True" ]; then
+    echo_info"\nInstall wkhtml and place shortcuts on correct place"
+    #pick up correct one from x64 & x32 versions:
+    if [ "`getconf LONG_BIT`" == "64" ];then
+        _url=$WKHTMLTOX_X64
+    else
+        _url=$WKHTMLTOX_X32
+    fi
+    sudo wget -c $_url
+    sudo gdebi --n `basename $_url`
+    sudo ln -sfn /usr/local/bin/wkhtmltopdf /usr/bin
+    sudo ln -sfn /usr/local/bin/wkhtmltoimage /usr/bin
+else
+  echo "Wkhtmltopdf isn't installed due to the choice of the user!"
+fi
+
+# Install Odoo
+echo_info "\nInstalling Odoo ${ODOO_BRANCH} server"
+if [ ! -d "${ODOO_HOME_EXT}" ]; then
+    $GIT --branch ${ODOO_BRANCH} git@github.com:erp27/odoo.git ${ODOO_HOME_EXT}/
+else
+echo_err "\nOdoo home: ${ODOO_HOME_EXT} already exist!"
+exit 1
+fi
+
+echo_info "\nCreate Odoo system user"
+if getent passwd ${ODOO_USER} > /dev/null 2>&1; then
+    sudo userdel -r ${ODOO_USER}
+fi
+
+sudo adduser --system --quiet --shell=/bin/bash --home=${ODOO_HOME} --gecos 'ODOO system user' --group $ODOO_USER
+#The user should also be added to the sudo'ers group
+sudo adduser $ODOO_USER sudo
+
+echo_info "\nCreate Odoo log directory"
+[ ! -d "/var/log/$ODOO_USER" ] && sudo mkdir /var/log/$ODOO_USER
+sudo chown $ODOO_USER:$ODOO_USER /var/log/$ODOO_USER
+
