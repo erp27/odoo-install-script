@@ -3,7 +3,7 @@
 # @author https://github.com/erp27
 
 # turn for debug
-#set -eux
+set -eux
 
 RED="\033[0;31m".
 GREEN="\033[0;32m".
@@ -56,6 +56,7 @@ WKHTMLTOX_X64=https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.x
 
 # Update Server
 echo_info "\nUpdate Ubuntu server"
+echo "deb http://mirrors.kernel.org/ubuntu/ xenial main" | sudo tee /etc/apt/sources.list.d/libpng12.list
 sudo apt-get update && sudo apt-get upgrade -y
 
 echo_info "\nInstall tool packages"
@@ -76,9 +77,12 @@ sudo su - postgres -c "createuser -s $ODOO_USER" 2> /dev/null || true
 
 # Install python3 + pip3
 echo_info "\nInstall Python 3 + pip3"
-sudo apt-get install python3 python3-pip -y
+sudo apt-get install libxml2-dev libxslt1-dev -y
+sudo apt-get install libsasl2-dev libldap2-dev libssl-dev
+sudo apt-get install python3 python3-dev python3-pip -y
 
-sudo ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+#sudo ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+mkdir -p ~/.ssh/
 ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 # clean old files
 rm -f ./requirements.txt
@@ -87,7 +91,8 @@ sudo pip3 install -r requirements.txt
 
 # Install Wkhtmltopdf if needed
 if [ $INSTALL_WKHTMLTOPDF = "True" ]; then
-    echo_info"\nInstall wkhtml and place shortcuts on correct place"
+    echo_info "\nInstall wkhtml and place shortcuts on correct place"
+    sudo apt-get install libpng12-0
     #pick up correct one from x64 & x32 versions:
     if [ "`getconf LONG_BIT`" == "64" ];then
         _url=$WKHTMLTOX_X64
@@ -105,7 +110,9 @@ fi
 # Install Odoo
 echo_info "\nInstalling Odoo ${ODOO_BRANCH} server"
 if [ ! -d "${ODOO_HOME_EXT}" ]; then
-    $GIT --branch ${ODOO_BRANCH} git@github.com:erp27/odoo.git ${ODOO_HOME_EXT}/
+    sudo mkdir -p ${ODOO_HOME_EXT}
+    sudo chown ${ODOO_USER}: ${ODOO_HOME_EXT}
+    $GIT --branch ${ODOO_BRANCH} https://github.com/erp27/odoo.git ${ODOO_HOME_EXT}/
 else
 echo_err "\nOdoo home: ${ODOO_HOME_EXT} already exist!"
 exit 1
@@ -143,7 +150,8 @@ sudo chmod 640 ${ODOO_CONFIG_FILE}
 
 # Adding ODOO as a deamon systemd)
 echo_info "Create systemd service file"
-cat <<EOF > /etc/systemd/system/odoo${ODOO_VERSION}.service
+sudo rm -f /etc/systemd/system/odoo${ODOO_VERSION}.service
+cat << EOF | sudo tee -a /etc/systemd/system/odoo${ODOO_VERSION}.service
 [Unit]
 Description=Odoo ${ODOO_VERSION} ERP system
 Requires=postgresql.service
@@ -179,7 +187,7 @@ echo "TCP port: $ODOO_XMLRPC_PORT"
 echo "User service: $ODOO_USER"
 echo "User PostgreSQL: $ODOO_USER"
 echo "Source code location: $ODOO_USER"
-echo "Addons dirctory: $ODOO_USER/$ODOO_CONFIG/addons/"
+echo "Addons directory: /home/$ODOO_USER/$ODOO_CONFIG/addons/"
 echo "Start Odoo service: sudo systemctl start odoo${ODOO_VERSION}"
 echo "Stop Odoo service: sudo systemctl stop odoo${ODOO_VERSION}"
 echo "Restart Odoo service: sudo systemctl restart odoo${ODOO_VERSION}"
