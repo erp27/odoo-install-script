@@ -43,7 +43,7 @@ ODOO_CONFIG="${ODOO_USER}"
 ODOO_CONFIG_FILE="/etc/${ODOO_CONFIG}.conf"
 ODOO_HOME_EXT="/opt/${ODOO_CONFIG}-server"
 # Set the default XML_RPC port
-ODOO_XMLRPC_PORT="8069"
+ODOO_XMLRPC_PORT="8012"
 # set the Master random password
 ODOO_SUPERADMIN=`head /dev/urandom | tr -dc A-Za-z0-9 | head -c 17`
 
@@ -59,7 +59,9 @@ echo_info "\nUpdate Ubuntu server"
 sudo apt-get update && sudo apt-get upgrade -y
 
 echo_info "\nInstall tool packages"
-sudo apt-get install wget wget curl git bzr ca-certificates gdebi-core -y
+sudo apt-get install wget wget curl git bzr ca-certificates -y
+sudo apt-get install sudo libxml2-dev libxslt1-dev gdebi-core -y
+sudo apt-get install libsasl2-dev python3-dev libldap2-dev libssl-dev -y
 
 # Install PostgreSQL
 sudo apt-get purge postgresql
@@ -108,7 +110,6 @@ if [ ! -d "${ODOO_HOME_EXT}" ]; then
     $GIT --branch ${ODOO_BRANCH} git@github.com:erp27/odoo.git ${ODOO_HOME_EXT}/
 else
 echo_err "\nOdoo home: ${ODOO_HOME_EXT} already exist!"
-exit 1
 fi
 
 echo_info "\nCreate Odoo system user"
@@ -136,7 +137,7 @@ sudo su root -c "printf '[options] \n; password that allows database operations:
 sudo su root -c "printf 'admin_passwd = ${ODOO_SUPERADMIN}\n' >> ${ODOO_CONFIG_FILE}"
 sudo su root -c "printf 'xmlrpc_port = ${ODOO_XMLRPC_PORT}\n' >> ${ODOO_CONFIG_FILE}"
 sudo su root -c "printf 'logfile = /var/log/${ODOO_USER}/${ODOO_CONFIG}.log\n' >> ${ODOO_CONFIG_FILE}"
-sudo su root -c "printf 'log_handler = :INFO\n' >> ${ODOO_CONFIG_FILE}"
+sudo su root -c "printf 'log_handler = werkzeug:CRITICAL,odoo.api:DEBUG,odoo:INFO\n' >> ${ODOO_CONFIG_FILE}"
 sudo su root -c "printf 'addons_path=${ODOO_HOME_EXT}/addons,${ODOO_HOME}/custom/addons\n' >> ${ODOO_CONFIG_FILE}"
 sudo chown ${ODOO_USER}: ${ODOO_CONFIG_FILE}
 sudo chmod 640 ${ODOO_CONFIG_FILE}
