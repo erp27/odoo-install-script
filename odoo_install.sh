@@ -32,7 +32,7 @@ function env_check_err() {
 
 # sudo chmod +x odoo-install.sh
 
-GIT="sudo git clone --depth 1"
+GIT="sudo git clone --single-branch --depth 1"
 # Choose the Odoo version which you want to install.
 # For example: 12, 11, 10, 9 ...
 ODOO_VERSION="12"
@@ -109,6 +109,16 @@ else
   echo "Wkhtmltopdf isn't installed due to the choice of the user!"
 fi
 
+# add user
+echo_info "\nCreate Odoo system user"
+if getent passwd ${ODOO_USER} > /dev/null 2>&1; then
+    sudo userdel -r ${ODOO_USER}
+fi
+
+sudo adduser --system --quiet --shell=/bin/bash --home=${ODOO_HOME} --gecos 'ODOO system user' --group $ODOO_USER
+#The user should also be added to the sudo'ers group
+sudo adduser $ODOO_USER sudo
+
 # Install Odoo
 echo_info "\nInstalling Odoo ${ODOO_BRANCH} server"
 if [ ! -d "${ODOO_HOME_EXT}" ]; then
@@ -119,14 +129,6 @@ else
 echo_err "\nOdoo home: ${ODOO_HOME_EXT} already exist!"
 fi
 
-echo_info "\nCreate Odoo system user"
-if getent passwd ${ODOO_USER} > /dev/null 2>&1; then
-    sudo userdel -r ${ODOO_USER}
-fi
-
-sudo adduser --system --quiet --shell=/bin/bash --home=${ODOO_HOME} --gecos 'ODOO system user' --group $ODOO_USER
-#The user should also be added to the sudo'ers group
-sudo adduser $ODOO_USER sudo
 
 echo_info "\nCreate Odoo log directory"
 [ ! -d "/var/log/$ODOO_USER" ] && sudo mkdir /var/log/$ODOO_USER
