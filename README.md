@@ -12,28 +12,38 @@ cd ./odoo-install-script
 
 ## Default setup
 
-Addons directory:
+Extra addons directory:
 
- /home/odoo12/odoo12/addons/
+`/home/odoo12/custom/addons`
+
+`/home/odoo12/.local/share/Odoo/addons/12.0`
 
 Start Odoo service:
 
- sudo systemctl start odoo12
+```bash
+sudo systemctl start odoo12
+```
 
 Stop Odoo service:
 
- sudo systemctl stop odoo12
+```bash
+sudo systemctl stop odoo12
+```
 
 Restart Odoo service:
 
- sudo systemctl restart odoo12
+```bash
+sudo systemctl restart odoo12
+```
 
 Show log:
 
- sudo tail -f /var/log/odoo12/odoo12.log
+```bash
+sudo tail -f /var/log/odoo12/odoo12.log
+```
 
 ## Author
 
 https://github.com/erp27
 
-Слава Україні та її Героям!
+> Слава Україні та її Героям!
